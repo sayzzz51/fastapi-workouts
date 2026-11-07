@@ -1,5 +1,5 @@
 from db import DB
-from schemas import Workout, WorkoutCreate, WorkoutPatch, WorkoutGroup, WorkoutBase, WorkoutUpdate, MuscleGroup
+from schemas import Workout, WorkoutCreate, WorkoutPatch, WorkoutGroup, WorkoutUpdate, MuscleGroup, WorkoutBase
 from fastapi import FastAPI, Query, Path, HTTPException, Depends, Body, APIRouter
 from typing import List, Dict, Annotated, Optional, Literal
 from pydantic import BaseModel, Field
