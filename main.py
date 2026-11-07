@@ -44,9 +44,15 @@ class WorkoutGroup(BaseModel):
     max_weight: int
 
 
+class WorkoutPatch(BaseModel):
+    exercise: Annotated[str, Field(max_length=50)] | None = None
+    muscle_group: MuscleGroup | None = None
+    weight: Annotated[int, Field(ge=0)] | None = None
+    reps: Annotated[int, Field(gt=0)] | None = None 
+
 
 @app.get("/workouts")
-def get_workouts(db: DB, muscle_group: MuscleGroup | None = None, min_weight: int | None = None) -> List[Workout]:
+def get_workouts(db: DB, muscle_group: MuscleGroup | None = None, min_weight: Annotated[int, Query(ge=1)] | None = None) -> List[Workout]:
     conditions = []
     params = []
     if muscle_group is not None:
@@ -94,6 +100,27 @@ def edit_workout(db: DB, data: WorkoutUpdate, workout_id: Annotated[int, Path(gt
     return edited_workout
 
 
+@app.patch("/workouts/{workout_id}")
+def patch_workout(db: DB, data: WorkoutPatch, workout_id: Annotated[int, Path(ge=1)]) -> Workout:
+    updated = data.model_dump(exclude_unset = True)
+    if not updated:
+        raise HTTPException(400)
+    
+    conditions = []
+    params = []
+    for key, value in updated.items():
+        conditions.append(f"{key} = %s")
+        params.append(value)
+    params.append(workout_id)
+
+    query = "UPDATE workouts SET " + ", ".join(conditions) + " WHERE id = %s RETURNING *"
+    patched = db.execute(query, params).fetchone()
+    if patched is None: 
+        raise HTTPException(404)
+    db.commit()
+    return patched
+    
+        
 @app.delete("/workouts/{workout_id}", status_code=204)
 def delete_workout(db: DB, workout_id: Annotated[int, Path(gt=0)]) -> None:
     deleted_workout = db.execute("DELETE FROM workouts WHERE id = %s RETURNING *", (workout_id,)).fetchone()
