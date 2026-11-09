@@ -1,5 +1,7 @@
 from typing import List, Dict, Annotated, Optional, Literal
 from pydantic import BaseModel, Field
+from fastapi import Depends, Query, Path, HTTPException
+from db import DB
 
 MuscleGroup = Literal["chest", "back", "legs", "arms"]
 
@@ -28,3 +30,20 @@ class WorkoutPatch(BaseModel):
     muscle_group: MuscleGroup | None = None
     weight: Annotated[int, Field(ge=0)] | None = None
     reps: Annotated[int, Field(gt=0)] | None = None 
+
+class PaginationParams(BaseModel):
+    limit: Annotated[int, Field(ge=1, le=100)] = 10
+    offset: Annotated[int, Field(ge=0)] = 0
+
+Pagination = Annotated[PaginationParams, Query()]
+
+
+### Проверка на 404
+def getid_or404(db: DB, workout_id: Annotated[int, Path(ge=1)]):
+    find_smtg = db.execute("SELECT * FROM workouts WHERE id = %s",(workout_id,)).fetchone()
+    if find_smtg is None:
+        raise HTTPException(404)
+    return find_smtg
+    
+
+WorkourOr404 = Annotated[dict, Depends(getid_or404)]
