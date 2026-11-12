@@ -1,6 +1,6 @@
 from db import DB
 from schemas import Workout, WorkoutCreate, WorkoutPatch, WorkoutGroup, WorkoutUpdate 
-from schemas import MuscleGroup, WorkoutBase, Pagination, WorkourOr404, Filter
+from schemas import MuscleGroup, WorkoutBase, Pagination, WorkourOr404, Filter, timer
 from fastapi import FastAPI, Query, Path, HTTPException, Depends, Body, APIRouter
 from typing import List, Dict, Annotated, Optional, Literal
 from pydantic import BaseModel, Field
@@ -11,6 +11,7 @@ router = APIRouter(prefix="/workouts", tags=["workouts"])
 
 
 @router.get("")
+@timer
 def get_workouts(db: DB, filter: Filter, page: Pagination, muscle_group: MuscleGroup | None = None, 
 min_weight: Annotated[int, Query(ge=1)] | None = None) -> List[Workout]:
     conditions = []
@@ -37,11 +38,13 @@ def get_stats(db: DB) -> List[WorkoutGroup]:
 
 
 @router.get("/{workout_id}")
+@timer
 def get_workout(db: DB,  workout_id: Annotated[int, Path(gt=0)], workout: WorkourOr404) -> Workout:
     return workout
 
 
 @router.post("", status_code=201)
+@timer
 def post_workout(db: DB, data: WorkoutCreate) -> Workout:
     new_workout = db.execute("INSERT INTO workouts (exercise, muscle_group, weight, reps) VALUES (%s, %s, %s, %s) RETURNING *", 
     (data.exercise, data.muscle_group, data.weight, data.reps)).fetchone()
@@ -50,6 +53,7 @@ def post_workout(db: DB, data: WorkoutCreate) -> Workout:
 
 
 @router.put("/{workout_id}")
+@timer
 def edit_workout(db: DB, data: WorkoutUpdate, workout_id: Annotated[int, Path(gt=0)], workout: WorkourOr404) -> Workout:
     edited_workout = db.execute("UPDATE workouts SET exercise = %s, muscle_group = %s, weight = %s, reps = %s WHERE id = %s RETURNING *", 
     (data.exercise, data.muscle_group, data.weight, data.reps, workout_id)).fetchone()
@@ -58,6 +62,7 @@ def edit_workout(db: DB, data: WorkoutUpdate, workout_id: Annotated[int, Path(gt
 
 
 @router.patch("/{workout_id}")
+@timer
 def patch_workout(db: DB, data: WorkoutPatch, workout_id: Annotated[int, Path(ge=1)], workout: WorkourOr404) -> Workout:
     updated = data.model_dump(exclude_unset = True)
     if not updated:
@@ -77,6 +82,7 @@ def patch_workout(db: DB, data: WorkoutPatch, workout_id: Annotated[int, Path(ge
 
 
 @router.delete("/{workout_id}", status_code=204)
+@timer
 def delete_workout(db: DB, workout_id: Annotated[int, Path(gt=0)], workout: WorkourOr404) -> None:
     db.execute("DELETE FROM workouts WHERE id = %s", (workout_id,))
     db.commit()

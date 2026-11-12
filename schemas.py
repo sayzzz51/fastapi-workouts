@@ -2,6 +2,8 @@ from typing import List, Dict, Annotated, Optional, Literal
 from pydantic import BaseModel, Field
 from fastapi import Depends, Query, Path, HTTPException
 from db import DB
+from functools import wraps 
+import time
 
 MuscleGroup = Literal["chest", "back", "legs", "arms"]
 
@@ -56,3 +58,16 @@ def filter(sort: Sort = "id", order: Order = "ASC") -> str:
     return filtred
     
 Filter = Annotated[str, Depends(filter)]
+
+
+
+def timer(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        print(f"запускаю функцию {func.__name__}")
+        start = time.time()
+        res = func(*args,**kwargs)
+        end = time.time() - start
+        print(f"Время работы: {round(end,3)}")
+        return res
+    return wrapper
