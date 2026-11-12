@@ -1,5 +1,6 @@
 from db import DB
-from schemas import Workout, WorkoutCreate, WorkoutPatch, WorkoutGroup, WorkoutUpdate, MuscleGroup, WorkoutBase, Pagination, WorkourOr404
+from schemas import Workout, WorkoutCreate, WorkoutPatch, WorkoutGroup, WorkoutUpdate 
+from schemas import MuscleGroup, WorkoutBase, Pagination, WorkourOr404, Filter
 from fastapi import FastAPI, Query, Path, HTTPException, Depends, Body, APIRouter
 from typing import List, Dict, Annotated, Optional, Literal
 from pydantic import BaseModel, Field
@@ -10,7 +11,7 @@ router = APIRouter(prefix="/workouts", tags=["workouts"])
 
 
 @router.get("")
-def get_workouts(db: DB, page: Pagination, muscle_group: MuscleGroup | None = None, 
+def get_workouts(db: DB, filter: Filter, page: Pagination, muscle_group: MuscleGroup | None = None, 
 min_weight: Annotated[int, Query(ge=1)] | None = None) -> List[Workout]:
     conditions = []
     params = []
@@ -23,7 +24,7 @@ min_weight: Annotated[int, Query(ge=1)] | None = None) -> List[Workout]:
     query = "SELECT * FROM workouts"
     if conditions:
         query += " WHERE " + " AND ".join(conditions)
-    query += " ORDER BY id "
+    query += filter
     query += "LIMIT %s OFFSET %s"
     params.append(page.limit)
     params.append(page.offset)
@@ -36,7 +37,7 @@ def get_stats(db: DB) -> List[WorkoutGroup]:
 
 
 @router.get("/{workout_id}")
-def get_workout(db: DB, workout_id: Annotated[int, Path(gt=0)], workout: WorkourOr404) -> Workout:
+def get_workout(db: DB,  workout_id: Annotated[int, Path(gt=0)], workout: WorkourOr404) -> Workout:
     return workout
 
 
@@ -77,7 +78,6 @@ def patch_workout(db: DB, data: WorkoutPatch, workout_id: Annotated[int, Path(ge
 
 @router.delete("/{workout_id}", status_code=204)
 def delete_workout(db: DB, workout_id: Annotated[int, Path(gt=0)], workout: WorkourOr404) -> None:
-    deleted_workout = db.execute("DELETE FROM workouts WHERE id = %s RETURNING *", (workout_id,)).fetchone()
-    if deleted_workout is None:
-        raise HTTPException(404)
+    db.execute("DELETE FROM workouts WHERE id = %s", (workout_id,))
     db.commit()
+        

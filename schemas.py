@@ -40,10 +40,19 @@ Pagination = Annotated[PaginationParams, Query()]
 
 ### Проверка на 404
 def getid_or404(db: DB, workout_id: Annotated[int, Path(ge=1)]):
-    find_smtg = db.execute("SELECT * FROM workouts WHERE id = %s",(workout_id,)).fetchone()
-    if find_smtg is None:
+    workout = db.execute("SELECT * FROM workouts WHERE id = %s",(workout_id,)).fetchone()
+    if workout is None:
         raise HTTPException(404)
-    return find_smtg
+    return workout
     
 
 WorkourOr404 = Annotated[dict, Depends(getid_or404)]
+
+Order = Literal["ASC", "DESC"]
+Sort = Literal["id", "weight", "reps"]
+### Зависимость сортировки и фильтра
+def filter(sort: Sort = "id", order: Order = "ASC") -> str:
+    filtred = f" ORDER BY {sort} {order} "
+    return filtred
+    
+Filter = Annotated[str, Depends(filter)]
